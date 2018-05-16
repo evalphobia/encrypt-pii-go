@@ -26,7 +26,7 @@ hieroGOlyph
 [21]: https://bettercodehub.com/edge/badge/evalphobia/hierogolyph?branch=master
 [22]: https://bettercodehub.com/
 
-`hierogolyph` is library for encryption/decryption plain text.
+`hierogolyph` is library for encryption/decryption plain text.  
 The implementation and cryptographic process is based on [18F/identity-idp](https://github.com/18F/identity-idp/blob/master/docs/encryption-and-key-rotation.md#implementation).
 
 # Usage
@@ -107,14 +107,6 @@ func main() {
 
 		user1.PII = plainText
 	}
-}
-
-func decrypt(cipherText, key string) (plaintText string, err error) {
-	h, err := hierogolyph.CreateHierogolyph(key, defaultConfig)
-	if err != nil {
-		return "", err
-	}
-	return h.Decrypt(cipherText)
 }
 
 type User struct {
