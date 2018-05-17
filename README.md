@@ -27,7 +27,7 @@ hieroGOlyph
 [22]: https://bettercodehub.com/
 
 `hierogolyph` is library for encryption/decryption plain text.  
-The implementation and cryptographic process is based on [18F/identity-idp](https://github.com/18F/identity-idp/blob/master/docs/encryption-and-key-rotation.md#implementation).
+The implementation and cryptographic process is based on [18F/identity-idp](https://github.com/18F/identity-idp/blob/master/docs/encryption-and-key-rotation.md#implementation).  
 
 # Usage
 
@@ -83,7 +83,6 @@ func main() {
 		// you should save these values
 		user1.EncryptedPII = cipherText
 		user1.Salt = h.Salt
-		user1.EncryptionKey = h.EncryptionKey
 		// clear PII
 		user1.PII = ""
 	}
@@ -97,7 +96,6 @@ func main() {
 			Config:        defaultConfig,
 			Password:      key,
 			Salt:          user1.Salt,
-			EncryptionKey: user1.EncryptionKey,
 		}
 
 		plainText, err := h.Decrypt(user1.EncryptedPII)
