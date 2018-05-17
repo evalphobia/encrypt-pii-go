@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"fmt"
 )
 
 // EncryptByGCM encrypts plainText using AES GCM mode.
@@ -51,8 +52,13 @@ func DecryptByGCM(cipherText, key []byte) (string, error) {
 		return "", err
 	}
 
-	nonce := cipherText[:gcm.NonceSize()]
-	plainByte, err := gcm.Open(nil, nonce, cipherText[gcm.NonceSize():], nil)
+	nonceSize := gcm.NonceSize()
+	if len(cipherText) < nonceSize {
+		return "", fmt.Errorf("cipherText is too short: textsize=[%d], noncesize=[%d]", len(cipherText), nonceSize)
+	}
+
+	nonce := cipherText[:nonceSize]
+	plainByte, err := gcm.Open(nil, nonce, cipherText[nonceSize:], nil)
 	if err != nil {
 		return "", err
 	}
