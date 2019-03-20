@@ -87,36 +87,116 @@ func testHierogolyph(t *testing.T, a *assert.Assertions, tt testHierogolyphData)
 	// create struct
 	h, err := CreateHierogolyph(tt.password, testConfig)
 	a.NoError(err, target)
+	originalSalt := h.Salt
+	var originalCipherText string
 
-	// encryption
-	cipherText, err := h.Encrypt(tt.secretText)
-	a.NoError(err, target)
+	// encryption and decryption
+	{
+		// encryption
+		cipherText, err := h.Encrypt(tt.secretText)
+		originalCipherText = cipherText
+		a.NoError(err, target)
 
-	// recreate Hierogolyph
-	h = Hierogolyph{
-		Config:   testConfig,
-		Password: tt.password,
-		Salt:     h.Salt,
+		// decryption by new instance
+		h2 := Hierogolyph{
+			Config:   testConfig,
+			Password: tt.password,
+			Salt:     originalSalt,
+		}
+		plainText, err := h2.Decrypt(cipherText)
+		a.NoError(err, target)
+		a.Equal(tt.secretText, plainText, target)
 	}
 
-	// decryption
-	plainText, err := h.Decrypt(cipherText)
-	a.NoError(err, target)
-	a.Equal(tt.secretText, plainText, target)
+	// re-encryption by new instance
+	{
+		// decryption by new instance
+		h3 := Hierogolyph{
+			Config:   testConfig,
+			Password: tt.password,
+			Salt:     originalSalt,
+		}
+		plainText, err := h3.Decrypt(originalCipherText)
+		a.NoError(err, target)
+		a.Equal(tt.secretText, plainText, target)
+
+		// re-encryption
+		err = h.SetEncryptionKey()
+		a.NoError(err, target)
+		_, err = h.Encrypt(tt.secretText)
+		a.NoError(err, target)
+	}
 
 	// try different HMAC Key
 	h.Config.HMACKey = testHMACKey + "12345"
-	_, err = h.Decrypt(cipherText)
+	_, err = h.Decrypt(originalCipherText)
 	if a.Error(err, target) {
 		a.Contains(err.Error(), "HMAC finger print error:", target)
 	}
 
 	// try different HSM
 	h.Config.HSM = hsmgcm.NewAesGcm([]byte("12345678901234567890123456789012"))
-	_, err = h.Decrypt(cipherText)
+	_, err = h.Decrypt(originalCipherText)
 	if a.Error(err, target) {
 		a.Contains(err.Error(), "cipher: message authentication failed", target)
 	}
+}
+
+func TestHierogolyph_EncryptionKey(t *testing.T) {
+	a := assert.New(t)
+	tests := []struct {
+		password string
+		salt     string
+	}{
+		{"password", "12345678901234567890"},
+		{"password", ""},
+		{"password", "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"},
+		{"", "12345678901234567890"},
+		{"", ""},
+	}
+
+	t.Run("Hierogolyph.SetEncryptionKey", func(t *testing.T) {
+		for _, tt := range tests {
+			target := fmt.Sprintf("%+v", tt)
+
+			h := Hierogolyph{
+				Config:   testConfig,
+				Password: tt.password,
+				Salt:     tt.salt,
+			}
+			a.Empty(h.EncryptionKey, target)
+
+			err := h.SetEncryptionKey()
+			a.NoError(err, target)
+			a.NotEmpty(h.EncryptionKey, target)
+
+			decoded, err := decodeBase64(h.EncryptionKey)
+			a.NotEmpty(decoded, target)
+			a.NoError(err, target)
+		}
+	})
+
+	t.Run("Hierogolyph.createEncryptionKey", func(t *testing.T) {
+		for _, tt := range tests {
+			target := fmt.Sprintf("%+v", tt)
+
+			h := Hierogolyph{
+				Config:   testConfig,
+				Password: tt.password,
+				Salt:     tt.salt,
+			}
+			a.Empty(h.EncryptionKey, target)
+
+			ek, err := h.createEncryptionKey()
+			a.NoError(err, target)
+			a.NotEmpty(ek, target)
+			a.Empty(h.EncryptionKey, target)
+
+			decoded, err := decodeBase64(ek)
+			a.NotEmpty(decoded, target)
+			a.NoError(err, target)
+		}
+	})
 }
 
 func TestCreateDigests(t *testing.T) {
@@ -147,7 +227,7 @@ func TestCreateDigests(t *testing.T) {
 	}
 }
 
-func TestCreateEncryptionKey(t *testing.T) {
+func Test_createEncryptionKey(t *testing.T) {
 	a := assert.New(t)
 
 	tests := []struct {
