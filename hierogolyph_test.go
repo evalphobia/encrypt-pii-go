@@ -16,6 +16,32 @@ const (
 	testGCMKey256 = `PD02lR@Wb^P/PFh$E79v5aWu{W,Ap\e;`
 )
 
+const (
+	// error messages
+	errInvalidCipher = "cipher: message authentication failed"
+	errDecodeBase64  = "illegal base64 data at input byte 0"
+	errEmptyKey      = "cipherText is too short: textsize=[0], noncesize=[12]"
+)
+
+var (
+	// test data for Unlock/Encrypt/Decrypt
+	testHierogolyph1 = Hierogolyph{
+		Password:      "password",
+		Salt:          "salt",
+		EncryptionKey: "d3N9SCtk5BNUuntNuSAKLi8X8MCMlGWJGMFyMi7y5WhfZh2bjEskaIfFOD3T+pE3Mf157vhJ5iN2h30jwUAPtg==",
+	}
+	testHierogolyph2 = Hierogolyph{
+		Password:      "password",
+		Salt:          "salt2",
+		EncryptionKey: "d3N9SEzjdDohqDNG0rPd1jFIwA6KDHd7M/nYoNKF3/3B9H3QnhRrrK86LDCulUfYJ+VZEvvfmeg+8v6MPtdAlA==",
+	}
+	testHierogolyph3 = Hierogolyph{
+		Password:      "password2",
+		Salt:          "salt",
+		EncryptionKey: "d3N9SC48GxcrG8Q/6lm/UT3Vhzp63oAsDNqzdz0JuGs44fBmQP87mOEOM1hzd/LaaggK9TV3ChE0XmcnGP0RtQ==",
+	}
+)
+
 var testConfig = Config{
 	Cipher:  aesgcm.CipherGCM{},
 	HSM:     hsmgcm.NewAesGcm([]byte(testGCMKey256)),
@@ -153,9 +179,10 @@ func TestHierogolyph_EncryptionKey(t *testing.T) {
 		{"password", "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"},
 		{"", "12345678901234567890"},
 		{"", ""},
+		{"password", "salt"},
 	}
 
-	t.Run("Hierogolyph.SetEncryptionKey", func(t *testing.T) {
+	t.Run("SetEncryptionKey", func(t *testing.T) {
 		for _, tt := range tests {
 			target := fmt.Sprintf("%+v", tt)
 
@@ -176,7 +203,7 @@ func TestHierogolyph_EncryptionKey(t *testing.T) {
 		}
 	})
 
-	t.Run("Hierogolyph.createEncryptionKey", func(t *testing.T) {
+	t.Run("createEncryptionKey", func(t *testing.T) {
 		for _, tt := range tests {
 			target := fmt.Sprintf("%+v", tt)
 
@@ -195,8 +222,164 @@ func TestHierogolyph_EncryptionKey(t *testing.T) {
 			decoded, err := decodeBase64(ek)
 			a.NotEmpty(decoded, target)
 			a.NoError(err, target)
+			t.Logf("Password:[%s] Salt:[%s] EK:[%s]\n", tt.password, tt.salt, ek)
 		}
 	})
+}
+
+func TestHierogolyph_Unlock(t *testing.T) {
+	a := assert.New(t)
+
+	const (
+		expectedCEK1 = "0092d011b191db7be716bf09ef7a26edde6b56525875842ead14b1dae561ff20"
+		expectedCEK2 = "60090ff6161d66a61a84b1a0b6a8074dc61e08ebb27cbce164b69a2f627af330"
+		expectedCEK3 = "08a2b950e712fdeeae72634a5b10fa1bd1293e37da1da1ae651180495385eb9a"
+		emptyCEK     = ""
+	)
+	h1 := testHierogolyph1
+	h2 := testHierogolyph2
+	h3 := testHierogolyph3
+
+	tests := []struct {
+		errMessage  string
+		password    string
+		salt        string
+		ek          string
+		expectedCEK string
+	}{
+		// success
+		{"", h1.Password, h1.Salt, h1.EncryptionKey, expectedCEK1},
+		{"", h2.Password, h2.Salt, h2.EncryptionKey, expectedCEK2},
+		{"", h3.Password, h3.Salt, h3.EncryptionKey, expectedCEK3},
+
+		// error
+		{errInvalidCipher, "password", "bad salt", h1.EncryptionKey, emptyCEK},
+		{errInvalidCipher, "bad password", "salt", h1.EncryptionKey, emptyCEK},
+		{errInvalidCipher, "password", "salt", h2.EncryptionKey, emptyCEK},
+		{errInvalidCipher, "password", "salt2", h1.EncryptionKey, emptyCEK},
+		{errInvalidCipher, "password2", "salt", h1.EncryptionKey, emptyCEK},
+		{errDecodeBase64, "password", "salt", "ek", emptyCEK},
+		{errEmptyKey, "password", "salt", "", emptyCEK},
+	}
+
+	for _, tt := range tests {
+		target := fmt.Sprintf("%+v", tt)
+
+		h := Hierogolyph{
+			Config:        testConfig,
+			Password:      tt.password,
+			Salt:          tt.salt,
+			EncryptionKey: tt.ek,
+		}
+
+		cek, err := h.Unlock()
+		if tt.errMessage != "" {
+			a.EqualError(err, tt.errMessage, target)
+			continue
+		}
+
+		a.NoError(err, target)
+		a.Equal(tt.expectedCEK, cek, target)
+	}
+}
+
+func TestHierogolyph_Encrypt(t *testing.T) {
+	a := assert.New(t)
+	h1 := testHierogolyph1
+	h2 := testHierogolyph2
+
+	tests := []struct {
+		errMessage string
+		password   string
+		salt       string
+		ek         string
+	}{
+		// success
+		{"", h1.Password, h1.Salt, h1.EncryptionKey},
+		{"", h2.Password, h2.Salt, h2.EncryptionKey},
+
+		// error
+		{errInvalidCipher, h1.Password, h1.Salt, h2.EncryptionKey},
+		{errDecodeBase64, h1.Password, h1.Salt, "ek"},
+		{errEmptyKey, h1.Password, h1.Salt, ""},
+	}
+
+	for _, tt := range tests {
+		target := fmt.Sprintf("%+v", tt)
+
+		h := Hierogolyph{
+			Config:        testConfig,
+			Password:      tt.password,
+			Salt:          tt.salt,
+			EncryptionKey: tt.ek,
+		}
+		platinText := "plain text"
+
+		cipherText, err := h.Encrypt(platinText)
+		if tt.errMessage != "" {
+			a.EqualError(err, tt.errMessage, target)
+			continue
+		}
+
+		a.NoError(err, target)
+		a.NotEmpty(cipherText, target)
+
+		// try empty hsm key
+		h.Config.HSM = hsmgcm.NewAesGcm(nil)
+		_, err = h.Encrypt(platinText)
+		a.EqualError(err, "crypto/aes: invalid key size 0", target)
+	}
+}
+
+func TestHierogolyph_Decrypt(t *testing.T) {
+	a := assert.New(t)
+	h1 := testHierogolyph1
+	h2 := testHierogolyph2
+
+	cipherText1 := "ZDNOOVNDdGs1Qk5VdW50TnVTQUtMaThYOE1DTWxHV0pHTUZ5TWk3eTVXaGZaaDJiakVza2FJZkZPRDNUK3BFM01mMTU3dmhKNWlOMmgzMGp3VUFQdGc9PQ==.AsBEVSwjdTlK38BJR72naWQe5Y0IgP4QmYXbreRcd9HmZMCxt6+yCQvMSLc1rgkLD2NYUMT68aUO02vcq4oZpBbERjn0liKe8Wsmmjqnvu+XGiPwFLnQHzw86KSlKM+m5V4u4KYruiCfD7vBy5Ls0koPxRHAoUsiZ4/f79IQJjQpZLzAIA=="
+
+	tests := []struct {
+		errMessage string
+		cipherText string
+		password   string
+		salt       string
+		ek         string
+	}{
+		// success
+		{"", cipherText1, h1.Password, h1.Salt, h1.EncryptionKey},
+
+		// error
+		{errInvalidCipher, cipherText1, h2.Password, h2.Salt, h2.EncryptionKey},
+		{errDecodeBase64, "a.b", h1.Password, h1.Salt, h1.EncryptionKey},
+		{errEmptyKey, ".", h1.Password, h1.Salt, h1.EncryptionKey},
+		{"cipherText=[] must have one dot `.`", "", h1.Password, h1.Salt, h1.EncryptionKey},
+		{"cipherText=[abcde] must have one dot `.`", "abcde", h1.Password, h1.Salt, h1.EncryptionKey},
+	}
+
+	for _, tt := range tests {
+		target := fmt.Sprintf("%+v", tt)
+
+		h := Hierogolyph{
+			Config:        testConfig,
+			Password:      tt.password,
+			Salt:          tt.salt,
+			EncryptionKey: tt.ek,
+		}
+
+		plainText, err := h.Decrypt(tt.cipherText)
+		if tt.errMessage != "" {
+			a.EqualError(err, tt.errMessage, target)
+			continue
+		}
+
+		a.NoError(err, target)
+		a.Equal("plain text", plainText, target)
+
+		// try empty hsm key
+		h.Config.HSM = hsmgcm.NewAesGcm(nil)
+		_, err = h.Decrypt(tt.cipherText)
+		a.EqualError(err, "crypto/aes: invalid key size 0", target)
+	}
 }
 
 func TestCreateDigests(t *testing.T) {
