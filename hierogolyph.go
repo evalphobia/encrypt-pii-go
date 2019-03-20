@@ -25,23 +25,27 @@ func CreateHierogolyph(password string, conf Config) (Hierogolyph, error) {
 		return Hierogolyph{}, err
 	}
 
-	z1, _ := createDigests(password, salt, conf.Hasher)
-	secretR, err := getRandomBytes(32)
+	h := Hierogolyph{
+		Config:   conf,
+		Password: password,
+		Salt:     salt,
+	}
+	err = h.SetEncryptionKey()
 	if err != nil {
 		return Hierogolyph{}, err
 	}
+	return h, nil
+}
 
-	ek, err := createEncryptionKey(z1, string(secretR), conf.HSM)
+// SetEncryptionKey sets an encryption key generated from password and salt.
+func (h *Hierogolyph) SetEncryptionKey() error {
+	ek, err := h.createEncryptionKey()
 	if err != nil {
-		return Hierogolyph{}, err
+		return err
 	}
 
-	return Hierogolyph{
-		Config:        conf,
-		Password:      password,
-		Salt:          salt,
-		EncryptionKey: ek,
-	}, nil
+	h.EncryptionKey = ek
+	return nil
 }
 
 // Unlock creates Content Encryption Key.
@@ -84,21 +88,12 @@ func (h Hierogolyph) Encrypt(plainText string) (cipherText string, err error) {
 
 // Decrypt decrypts given cipherText.
 func (h Hierogolyph) Decrypt(cipherText string) (plainText string, err error) {
-	parts := strings.Split(cipherText, ".")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("cipherText=[%s] must have one dot `.`", cipherText)
-	}
-
-	key, err := decodeBase64(parts[0])
-	if err != nil {
-		return "", err
-	}
-	encryptedText, err := decodeBase64(parts[1])
+	encryptionKey, encryptedText, err := decodeCipherText(cipherText)
 	if err != nil {
 		return "", err
 	}
 
-	h.EncryptionKey = key
+	h.EncryptionKey = encryptionKey
 	cek, err := h.Unlock()
 	if err != nil {
 		return "", err
@@ -109,7 +104,7 @@ func (h Hierogolyph) Decrypt(cipherText string) (plainText string, err error) {
 		return "", err
 	}
 
-	parts = strings.Split(fingerprintedText, ".")
+	parts := strings.Split(fingerprintedText, ".")
 	if len(parts) != 2 {
 		return "", fmt.Errorf("fingerprintedText=[%s] must have one dot `.`", fingerprintedText)
 	}
@@ -129,6 +124,37 @@ func (h Hierogolyph) Decrypt(cipherText string) (plainText string, err error) {
 	}
 
 	return plainText, nil
+}
+
+// createEncryptionKey creates encryption key from password and salt.
+func (h *Hierogolyph) createEncryptionKey() (string, error) {
+	secretR, err := getRandomBytes(32)
+	if err != nil {
+		return "", err
+	}
+
+	conf := h.Config
+	z1, _ := createDigests(h.Password, h.Salt, conf.Hasher)
+	return createEncryptionKey(z1, string(secretR), conf.HSM)
+}
+
+// decodeCipherText decodes from cipherText and returns encryptionKey and encryptedText.
+func decodeCipherText(cipherText string) (encryptionKey, encryptedText string, err error) {
+	parts := strings.Split(cipherText, ".")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("cipherText=[%s] must have one dot `.`", cipherText)
+	}
+
+	encryptionKey, err = decodeBase64(parts[0])
+	if err != nil {
+		return "", "", err
+	}
+	encryptedText, err = decodeBase64(parts[1])
+	if err != nil {
+		return "", "", err
+	}
+
+	return encryptionKey, encryptedText, nil
 }
 
 // createDigests creates 32byte string pair from given password and salt by hashing.
