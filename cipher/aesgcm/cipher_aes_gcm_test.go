@@ -7,11 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCipherGCM(t *testing.T) {
+func TestCipher(t *testing.T) {
 	a := assert.New(t)
 	validKey := "12345678901234567890123456789012" // 32byte
 	invalidKey := "X2345678901234567890123456789012"
 	shortKey := "too short"
+	longKey := validKey + "XYZ" // 35byte
 
 	tests := []struct {
 		text string
@@ -22,7 +23,7 @@ func TestCipherGCM(t *testing.T) {
 		{""},
 	}
 
-	c := CipherGCM{}
+	c := Cipher{}
 	for _, tt := range tests {
 		target := fmt.Sprintf("%+v", tt)
 
@@ -48,6 +49,11 @@ func TestCipherGCM(t *testing.T) {
 		if a.Error(err, target) {
 			a.Contains(err.Error(), "cipher: message authentication failed", target)
 		}
+
+		// long key should be used as first 32byte key.
+		plainTextLongKey, err := c.Decrypt(cipher1, []byte(longKey))
+		a.NoError(err, target)
+		a.Equal(tt.text, plainTextLongKey, target)
 
 		plainText2, err := c.Decrypt(cipher2, []byte(invalidKey))
 		a.NoError(err, target)
