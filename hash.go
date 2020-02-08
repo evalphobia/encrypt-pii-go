@@ -15,6 +15,6 @@ func HashSHA256(data string) string {
 // HashHMAC returns a HMAC signed message using the given key.
 func HashHMAC(plainText, key string) string {
 	mac := hmac.New(sha256.New, []byte(key))
-	mac.Write([]byte(plainText))
+	_, _ = mac.Write([]byte(plainText))
 	return hex.EncodeToString(mac.Sum(nil))
 }

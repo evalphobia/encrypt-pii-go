@@ -43,8 +43,8 @@ var (
 )
 
 var testConfig = Config{
-	Cipher:  aesgcm.CipherGCM{},
-	HSM:     hsmgcm.NewAesGcm([]byte(testGCMKey256)),
+	Cipher:  aesgcm.Cipher{},
+	HSM:     hsmgcm.NewMockHSM([]byte(testGCMKey256)),
 	Hasher:  argon2.Argon2{},
 	HMACKey: testHMACKey,
 }
@@ -161,7 +161,7 @@ func testHierogolyph(t *testing.T, a *assert.Assertions, tt testHierogolyphData)
 	}
 
 	// try different HSM
-	h.Config.HSM = hsmgcm.NewAesGcm([]byte("12345678901234567890123456789012"))
+	h.Config.HSM = hsmgcm.NewMockHSM([]byte("12345678901234567890123456789012"))
 	_, err = h.Decrypt(originalCipherText)
 	if a.Error(err, target) {
 		a.Contains(err.Error(), "cipher: message authentication failed", target)
@@ -325,7 +325,7 @@ func TestHierogolyph_Encrypt(t *testing.T) {
 		a.NotEmpty(cipherText, target)
 
 		// try empty hsm key
-		h.Config.HSM = hsmgcm.NewAesGcm(nil)
+		h.Config.HSM = hsmgcm.NewMockHSM(nil)
 		_, err = h.Encrypt(platinText)
 		a.EqualError(err, "crypto/aes: invalid key size 0", target)
 	}
@@ -376,7 +376,7 @@ func TestHierogolyph_Decrypt(t *testing.T) {
 		a.Equal("plain text", plainText, target)
 
 		// try empty hsm key
-		h.Config.HSM = hsmgcm.NewAesGcm(nil)
+		h.Config.HSM = hsmgcm.NewMockHSM(nil)
 		_, err = h.Decrypt(tt.cipherText)
 		a.EqualError(err, "crypto/aes: invalid key size 0", target)
 	}
@@ -427,7 +427,7 @@ func Test_createEncryptionKey(t *testing.T) {
 		{"1234", "5678"},
 	}
 
-	gcm := hsmgcm.NewAesGcm([]byte(testGCMKey256))
+	gcm := hsmgcm.NewMockHSM([]byte(testGCMKey256))
 	for _, tt := range tests {
 		target := fmt.Sprintf("%+v", tt)
 		result1, err := createEncryptionKey(tt.a, tt.b, gcm)

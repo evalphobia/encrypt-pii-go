@@ -26,8 +26,8 @@ hieroGOlyph
 [21]: https://bettercodehub.com/edge/badge/evalphobia/hierogolyph?branch=master
 [22]: https://bettercodehub.com/
 
-`hierogolyph` is library for encryption/decryption plain text.  
-The implementation and cryptographic process is based on [18F/identity-idp](https://github.com/18F/identity-idp/blob/master/docs/encryption-and-key-rotation.md#implementation).  
+`hierogolyph` is library for encryption/decryption plain text.
+The implementation and cryptographic process is based on [18F/identity-idp](https://github.com/18F/identity-idp/blob/master/docs/encryption-and-key-rotation.md#implementation).
 
 # Usage
 
@@ -123,9 +123,13 @@ type User struct {
 
 - Hash
     - Argon2id
-    - ~scrypt~ (TODO)
+    - Baloon (by https://github.com/nogoegst/balloon)
+    - PBKDF2
+    - SCrypt
 - HSM
-    - ~Amazon KMS~ (TODO)
+    - Amazon KMS
     - AES GCM (mock)
+    - ChaCha20-Poly1305 (mock)
 - Main Encryption
     - AES GCM
+    - ChaCha20-Poly1305

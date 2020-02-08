@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAesGcm(t *testing.T) {
+func TestMockHSM(t *testing.T) {
 	a := assert.New(t)
 	validKey := "12345678901234567890123456789012" // 32byte
 	invalidKey := "X2345678901234567890123456789012"
@@ -23,44 +23,44 @@ func TestAesGcm(t *testing.T) {
 		{""},
 	}
 
-	gcmValid := AesGcm{Key: []byte(validKey)}
-	gcmInvalid := AesGcm{Key: []byte(invalidKey)}
-	gcmShortKey := AesGcm{Key: []byte(shortKey)}
+	hsmValid := MockHSM{Key: []byte(validKey)}
+	hsmInvalid := MockHSM{Key: []byte(invalidKey)}
+	hsmShortKey := MockHSM{Key: []byte(shortKey)}
 	for _, tt := range tests {
 		target := fmt.Sprintf("%+v", tt)
 
-		_, err := gcmShortKey.Encrypt(tt.text)
+		_, err := hsmShortKey.Encrypt(tt.text)
 		if a.Error(err, "using short key") {
 			a.Contains(err.Error(), "crypto/aes: invalid key size ", target, "using short key")
 		}
 
 		// encryption
-		cipher1, err := gcmValid.Encrypt(tt.text)
+		cipher1, err := hsmValid.Encrypt(tt.text)
 		a.NoError(err, target)
 		a.True(strings.HasPrefix(cipher1, encryptionPrefix))
 
-		cipher2, err := gcmInvalid.Encrypt(tt.text)
+		cipher2, err := hsmInvalid.Encrypt(tt.text)
 		a.NoError(err, target)
 		a.NotEqual(cipher1, cipher2, target, "using invalid key")
 		a.True(strings.HasPrefix(cipher2, encryptionPrefix))
 
 		// decryption
-		plainText1, err := gcmValid.Decrypt([]byte(cipher1))
+		plainText1, err := hsmValid.Decrypt([]byte(cipher1))
 		a.NoError(err, target)
 		a.Equal(tt.text, plainText1, target)
 
-		_, err = gcmInvalid.Decrypt([]byte(cipher1))
+		_, err = hsmInvalid.Decrypt([]byte(cipher1))
 		if a.Error(err, target) {
 			a.Contains(err.Error(), "cipher: message authentication failed", target)
 		}
 
-		plainText2, err := gcmInvalid.Decrypt([]byte(cipher2))
+		plainText2, err := hsmInvalid.Decrypt([]byte(cipher2))
 		a.NoError(err, target)
 		a.Equal(tt.text, plainText2, target)
 	}
 }
 
-func TestNewAesGcm(t *testing.T) {
+func TestNewMockHSM(t *testing.T) {
 	a := assert.New(t)
 
 	tests := []struct {
@@ -81,9 +81,9 @@ func TestNewAesGcm(t *testing.T) {
 	for _, tt := range tests {
 		target := fmt.Sprintf("%+v", tt)
 
-		gcm := NewAesGcm([]byte(tt.key))
-		if a.NotEmpty(gcm, target) {
-			a.Equal(tt.expectedKey, string(gcm.Key), target)
+		hsm := NewMockHSM([]byte(tt.key))
+		if a.NotEmpty(hsm, target) {
+			a.Equal(tt.expectedKey, string(hsm.Key), target)
 		}
 	}
 }

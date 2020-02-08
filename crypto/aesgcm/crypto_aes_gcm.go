@@ -1,4 +1,4 @@
-package crypto
+package aesgcm
 
 import (
 	"crypto/aes"
@@ -7,8 +7,8 @@ import (
 	"fmt"
 )
 
-// EncryptByGCM encrypts plainText using AES GCM mode.
-func EncryptByGCM(plainText string, key []byte) ([]byte, error) {
+// Encrypt encrypts plainText using AES GCM mode.
+func Encrypt(plainText string, key []byte) ([]byte, error) {
 	// use first 32byte if the key length is longer than 32byte.
 	if len(key) > 32 {
 		key = key[0:32]
@@ -36,8 +36,8 @@ func EncryptByGCM(plainText string, key []byte) ([]byte, error) {
 	return cipherText, nil
 }
 
-// DecryptByGCM decrypts cipherText using AES GCM mode.
-func DecryptByGCM(cipherText, key []byte) (string, error) {
+// Decrypt decrypts cipherText using AES GCM mode.
+func Decrypt(cipherText, key []byte) (string, error) {
 	// use first 32byte if the key length is longer than 32byte.
 	if len(key) > 32 {
 		key = key[0:32]
