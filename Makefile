@@ -5,6 +5,7 @@ GO111MODULE=on
 
 init:
 	go get -v ./...
+	go get -v github.com/stretchr/testify
 
 lint:
 	@type golangci-lint > /dev/null || go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
