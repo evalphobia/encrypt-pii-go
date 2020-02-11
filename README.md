@@ -9,8 +9,8 @@ hieroGOlyph
 [4]: LICENSE.md
 [5]: https://img.shields.io/github/release/evalphobia/hierogolyph.svg
 [6]: https://github.com/evalphobia/hierogolyph/releases/latest
-[7]: https://travis-ci.org/evalphobia/hierogolyph.svg?branch=master
-[8]: https://travis-ci.org/evalphobia/hierogolyph
+[7]: https://github.com/evalphobia/hierogolyph/workflows/test/badge.svg
+[8]: https://github.com/evalphobia/hierogolyph/actions?query=workflow%3Atest
 [9]: https://coveralls.io/repos/evalphobia/hierogolyph/badge.svg?branch=master&service=github
 [10]: https://coveralls.io/github/evalphobia/hierogolyph?branch=master
 [11]: https://codecov.io/github/evalphobia/hierogolyph/coverage.svg?branch=master
