@@ -2,7 +2,6 @@
 .PHONY: init lint test bench
 
 GO111MODULE=on
-GO_BIN_PATH := `go env GOPATH`
 LINT_OPT := -E gofmt \
             -E golint \
 			-E gosec \
@@ -19,11 +18,11 @@ lint:
 	golangci-lint run $(LINT_OPT) ./...
 
 test:
-	go test -race -covermode atomic -coverprofile=coverage.out -count=1 ./...
+	go test -covermode atomic -coverprofile=coverage.out -count=1 ./...
 
 send-coverage:
-	go get github.com/mattn/goveralls
-	$(GO_BIN_PATH)/bin/goveralls -coverprofile=coverage.out -service=github
+	@type goveralls > /dev/null || go get github.com/mattn/goveralls
+	goveralls -coverprofile=coverage.out -service=github
 
 bench:
 	go test ./... -run=^_ -bench . -benchmem | grep -e '^Bench'
