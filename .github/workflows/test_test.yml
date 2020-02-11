@@ -16,14 +16,24 @@ jobs:
 
     - name: setup env
       run: |
-        echo "::set-env name=GOPATH::$(go env GOPATH)"
-        echo "::add-path::$(go env GOPATH)/bin"
+        echo "::set-env name=GOPATH::${{ github.workspace }}"
+        echo "::add-path::${{ github.workspace }}/bin"
       shell: bash
 
     - name: Check out code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
+      with:
+        path: src/github.com/evalphobia/hierogolyph
 
     - name: Test
       run: |
         make init
         make test
+      working-directory: src/github.com/evalphobia/hierogolyph
+
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        make send-coverage
+      working-directory: src/github.com/evalphobia/hierogolyph

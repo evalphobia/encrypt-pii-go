@@ -17,8 +17,6 @@ var (
 	bechmarkText2k    = strings.Repeat("abcdefghijklmnop", 128) // 16*128
 	bechmarkTextMB10  = "あいうえおかきくけこ"                            // 10 * 3byte (multi-byte char)
 	bechmarkTextMB10k = strings.Repeat(bechmarkTextMB10, 1000)  // 30byte * 10k = 30KB
-
-	bechmarkSalt32 = strings.Repeat("1234", 8) // 4*8
 )
 
 func Benchmark_Encrypt(b *testing.B) {
