@@ -1,10 +1,10 @@
-name: test
+name: lint
 
 on: [push]
 
 jobs:
   build:
-    name: Test
+    name: Lint
     runs-on: ubuntu-latest
     steps:
 
@@ -23,13 +23,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v1
 
-    - name: Test
+    - name: Lint
       run: |
         make init
-        make test
-
-    - name: Send coverage
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        make send-coverage
+        make lint
